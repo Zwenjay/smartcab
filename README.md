@@ -1,1 +1,0 @@
-Since I seperated the process of training and testing, you should run agent.py first, to get the Qlist.txt(already exsit, but you can delete and train again) and then run test.py using Qlist.txt to print the result, here I set the try times as 1000.
