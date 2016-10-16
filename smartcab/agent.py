@@ -17,16 +17,18 @@ class LearningAgent(Agent):
 		# TODO: Initialize any additional variables here
 
 		next_point=["forward","left","right",None]
-		Fs=[True, False]
-		Rs=[True,False]
-		Ls=[True,False]
+		light_state=["red","green"]
+		oncoming_state=["forward","left","right",None]
+		left_state=["forward","left","right",None]
+		right_state=["forward","left","right",None]
+
 		state=[]
 		for i in next_point:
-			for j in Fs:
-				for k in Rs:
-					for l in Ls:
-						state.append((i,j,k,l))
-
+			for j in light_state:
+				for k in oncoming_state:
+					for l in left_state:
+						for m in right_state:
+							state.append((i,j,k,l,m))
 
 		ind=0
 		for item in state:
@@ -36,11 +38,8 @@ class LearningAgent(Agent):
 
 		rewardlist=pd.DataFrame(index=range(len(state)), columns=['forward', 'right','left',None])
 		self.Qlist=rewardlist.where(rewardlist.notnull(), 0)
-		self.alpha=0.6
-		self.gamma=0.4
-
-
-
+		self.alpha=0.4
+		self.gamma=0.6
 
 	def reset(self, destination=None):
 		self.planner.route_to(destination)
@@ -48,7 +47,6 @@ class LearningAgent(Agent):
 
 	def update(self, t):
 		# Gather inputs
-		
 
 		deadline = self.env.get_deadline(self)
 
@@ -58,15 +56,22 @@ class LearningAgent(Agent):
 		oncoming=inputs['oncoming']
 		left=inputs['left']
 		right=inputs['right']
-		forward_safe=light=='green'
-		right_safe=light=='green' or (light=='red' and not oncoming=='left' and not left=='forward')
-		left_safe=light=='green' and 'oncoming'==None
-		pro_inputs={'Next_waypoint':self.next_waypoint, 'F':forward_safe, 'R':right_safe, 'L':left_safe}
-		state=(self.next_waypoint, forward_safe, right_safe,left_safe)
+		
+		pro_inputs={'Next_waypoint':self.next_waypoint,'Light': light,'Oncoming':oncoming, 'Right':right, 'Left':left}
+		state=(self.next_waypoint, light, oncoming, left, right)
+
 		self.state=pro_inputs
 		current_state=state
 
-		action=random.choice(["forward","left","right",None])
+		if t<1:
+			action=random.choice(["forward","left","right",None])
+		else:
+			best_Q=self.Qlist.loc[state_dict[current_state]].max()
+			action_l=[]
+			for item in ["forward","left","right",None]:
+				if self.Qlist.loc[state_dict[current_state],item]==best_Q:
+					action_l.append(item)
+			action = random.choice(action_l)
 
 		# Execute action and get reward
 		reward = self.env.act(self, action)
@@ -78,14 +83,11 @@ class LearningAgent(Agent):
 		oncoming=inputs['oncoming']
 		left=inputs['left']
 		right=inputs['right']
-		forward_safe=light=='green'
-		right_safe=light=='green' or (light=='red' and not oncoming=='left' and not left=='forward')
-		left_safe=light=='green' and 'oncoming'==None
-		pro_inputs={'Next_waypoint':self.next_waypoint, 'F':forward_safe, 'R':right_safe, 'L':left_safe}
-		state=(self.next_waypoint, forward_safe, right_safe,left_safe)
-		next_state=state
-		self.state=pro_inputs
 
+		pro_inputs={'Next_waypoint':self.next_waypoint,'Light': light,'Oncoming':oncoming, 'Right':right, 'Left':left}
+		self.state=pro_inputs
+		state=(self.next_waypoint, light, oncoming, left, right)
+		next_state=state
 		# TODO: Learn policy based on state, action, reward
 		self.Qlist.loc[state_dict[current_state],action]=(1-self.alpha)*self.Qlist.loc[state_dict[current_state],action]+self.alpha*(reward+self.gamma*self.Qlist.loc[state_dict[next_state]].max())
 
@@ -99,11 +101,11 @@ def run():
     # Set up environment and agent
     e = Environment()  # create environment (also adds some dummy traffic)
     a = e.create_agent(LearningAgent)  # create agent
-    e.set_primary_agent(a, enforce_deadline=False)  # specify agent to track
+    e.set_primary_agent(a, enforce_deadline=True)  # specify agent to track
     # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
     # Now simulate it
-    sim = Simulator(e, update_delay=0, display=False)  # create simulator (uses pygame when display=True, if available)
+    sim = Simulator(e, update_delay=0.5, display=True)  # create simulator (uses pygame when display=True, if available)
     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
 
