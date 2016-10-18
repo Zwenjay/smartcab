@@ -38,8 +38,9 @@ class LearningAgent(Agent):
 
 		rewardlist=pd.DataFrame(index=range(len(state)), columns=['forward', 'right','left',None])
 		self.Qlist=rewardlist.where(rewardlist.notnull(), 0)
-		self.alpha=0.4
-		self.gamma=0.6
+		self.alpha=0.85
+		self.gamma=0.4
+		self.epsilon=0.02
 
 	def reset(self, destination=None):
 		self.planner.route_to(destination)
@@ -72,6 +73,8 @@ class LearningAgent(Agent):
 				if self.Qlist.loc[state_dict[current_state],item]==best_Q:
 					action_l.append(item)
 			action = random.choice(action_l)
+			if random.random()<self.epsilon:
+				action=random.choice(["forward","left","right",None])
 
 		# Execute action and get reward
 		reward = self.env.act(self, action)
@@ -105,20 +108,13 @@ def run():
     # NOTE: You can set enforce_deadline=False while debugging to allow longer trials
 
     # Now simulate it
-    sim = Simulator(e, update_delay=0.5, display=True)  # create simulator (uses pygame when display=True, if available)
+    sim = Simulator(e, update_delay=0, display=False)  # create simulator (uses pygame when display=True, if available)
     # NOTE: To speed up simulation, reduce update_delay and/or set display=False
 
-
-    sim.run(n_trials=100)  # run for a specified number of trials
+    for i in range(5):
+        sim.run(n_trials=100)  # run for a specified number of trials
+        e.reset()
     # NOTE: To quit midway, press Esc or close pygame window, or hit Ctrl+C on the command-line
     print e.success_time
-    with open('Qlist.txt','w') as f:
-		for states in a.Qlist.index:
-			for actions in a.Qlist.columns:
-				f.write(str(a.Qlist.loc[states,actions]))
-				f.write('\t')
-			f.write('\r\n')
-
-
 if __name__ == '__main__':
     run()
